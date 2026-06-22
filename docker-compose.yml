@@ -1,0 +1,34 @@
+services:
+  mariadb:
+    image: mariadb:11
+    container_name: oa-monitor-db
+    environment:
+      MARIADB_ROOT_PASSWORD: oamonitor
+      MARIADB_DATABASE: oa_monitor
+      MARIADB_USER: oamonitor
+      MARIADB_PASSWORD: oamonitor
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: .
+    container_name: oa-monitor-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mariadb://mariadb:3306/oa_monitor
+      SPRING_DATASOURCE_USERNAME: oamonitor
+      SPRING_DATASOURCE_PASSWORD: oamonitor
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+volumes:
+  mariadb_data:

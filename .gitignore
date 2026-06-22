@@ -1,0 +1,19 @@
+# Gradle
+build/
+.gradle/
+
+# Java
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Docker
+docker-compose.override.yml
+
+# Logs
+*.log

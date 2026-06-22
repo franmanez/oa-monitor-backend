@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: oa-monitor-backend
+
+  datasource:
+    url: jdbc:mariadb://localhost:3307/oa_monitor
+    username: oamonitor
+    password: oamonitor
+    driver-class-name: org.mariadb.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MariaDBDialect
+
+  sql:
+    init:
+      mode: never
+
+openalex:
+  email: openaccess@oamonitor.es
+  base-url: https://api.openalex.org
+  per-page: 200
