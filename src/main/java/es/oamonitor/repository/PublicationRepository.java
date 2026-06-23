@@ -84,4 +84,28 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
 
     @Query("SELECT DISTINCT p.publicationYear FROM Publication p ORDER BY p.publicationYear DESC")
     List<Integer> findDistinctYearsAll();
+
+    @Query("SELECT p.journalName, p.journalIssn, COUNT(p), COALESCE(SUM(p.apcEstimatedEur), 0) " +
+           "FROM Publication p WHERE p.institution.id = :institutionId " +
+           "AND p.oaStatusResolved IN ('GOLD', 'HYBRID') " +
+           "AND p.apcEstimatedEur IS NOT NULL " +
+           "AND (:year IS NULL OR p.publicationYear = :year) " +
+           "GROUP BY p.journalName, p.journalIssn " +
+           "ORDER BY SUM(p.apcEstimatedEur) DESC")
+    List<Object[]> journalApcByInstitution(@Param("institutionId") UUID institutionId, @Param("year") Integer year);
+
+    @Query("SELECT p.journalName, p.journalIssn, COUNT(p) " +
+           "FROM Publication p WHERE p.institution.id = :institutionId " +
+           "AND (:year IS NULL OR p.publicationYear = :year) " +
+           "GROUP BY p.journalName, p.journalIssn " +
+           "ORDER BY COUNT(p) DESC")
+    List<Object[]> topJournalsByInstitution(@Param("institutionId") UUID institutionId, @Param("year") Integer year);
+
+    @Query("SELECT p.institution.id, p.institution.name, COUNT(p), " +
+           "SUM(CASE WHEN p.oaStatusResolved <> 'CLOSED' THEN 1 ELSE 0 END), " +
+           "COALESCE(SUM(p.apcEstimatedEur), 0), " +
+           "SUM(CASE WHEN p.apcEstimatedEur IS NOT NULL THEN 1 ELSE 0 END) " +
+           "FROM Publication p WHERE p.publicationYear = :year " +
+           "GROUP BY p.institution.id, p.institution.name")
+    List<Object[]> aggregateInstitutionScatter(@Param("year") int year);
 }

@@ -274,6 +274,43 @@ public class InstitutionService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public List<JournalApcDto> getJournalsByApc(UUID institutionId, Integer year) {
+        return publicationRepository.journalApcByInstitution(institutionId, year).stream()
+                .map(row -> new JournalApcDto(
+                        (String) row[0],
+                        (String) row[1],
+                        (Long) row[2],
+                        (java.math.BigDecimal) row[3]
+                )).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<JournalCountDto> getTopJournals(UUID institutionId, Integer year, int limit) {
+        return publicationRepository.topJournalsByInstitution(institutionId, year).stream()
+                .limit(limit)
+                .map(row -> new JournalCountDto(
+                        (String) row[0],
+                        (String) row[1],
+                        (Long) row[2]
+                )).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<InstitutionScatterDto> getInstitutionScatter(int year) {
+        return publicationRepository.aggregateInstitutionScatter(year).stream()
+                .map(row -> {
+                    String id = ((UUID) row[0]).toString();
+                    String name = (String) row[1];
+                    long total = (Long) row[2];
+                    long open = (Long) row[3];
+                    java.math.BigDecimal apcCost = (java.math.BigDecimal) row[4];
+                    long withApc = (Long) row[5];
+                    double oaPct = total > 0 ? Math.round((double) open / total * 1000.0) / 10.0 : 0.0;
+                    return new InstitutionScatterDto(id, name, total, oaPct, apcCost, withApc > 0);
+                }).collect(Collectors.toList());
+    }
+
     private InstitutionDto toDto(Institution inst) {
         long total = publicationRepository.countByInstitutionId(inst.getId());
         return new InstitutionDto(

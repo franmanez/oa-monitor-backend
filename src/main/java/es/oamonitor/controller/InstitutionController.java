@@ -87,6 +87,21 @@ public class InstitutionController {
         return institutionService.getNationalStats();
     }
 
+    @GetMapping("/stats/scatter")
+    public List<InstitutionScatterDto> getScatter(@RequestParam int year) {
+        return institutionService.getInstitutionScatter(year);
+    }
+
+    @GetMapping("/{id}/journals/apc")
+    public List<JournalApcDto> getJournalsByApc(@PathVariable UUID id, @RequestParam(required = false) Integer year) {
+        return institutionService.getJournalsByApc(id, year);
+    }
+
+    @GetMapping("/{id}/journals/top")
+    public List<JournalCountDto> getTopJournals(@PathVariable UUID id, @RequestParam(required = false) Integer year, @RequestParam(defaultValue = "10") int limit) {
+        return institutionService.getTopJournals(id, year, limit);
+    }
+
     @GetMapping("/{id}/export")
     public ResponseEntity<org.springframework.core.io.Resource> exportCsv(
             @PathVariable UUID id,
