@@ -109,9 +109,14 @@ public class OpenAlexHarvestService {
         }
 
         String oaUrl = extractOaUrl(work);
-        if (oaUrl != null) {
+        if (oaUrl != null && !oaUrl.contains("doi.org")) {
             pub.setRepositoryUrl(oaUrl);
-            pub.setFoundInRepository(true);
+        }
+
+        if (existing.isEmpty()) {
+            pub.setSource(PublicationSource.OPENALEX);
+        } else if (pub.getSource() == PublicationSource.REPO) {
+            pub.setSource(PublicationSource.OPENALEX_REPO);
         }
 
         publicationRepository.save(pub);

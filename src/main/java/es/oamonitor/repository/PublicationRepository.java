@@ -17,6 +17,8 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
 
     Optional<Publication> findByInstitutionIdAndDoi(UUID institutionId, String doi);
 
+    Optional<Publication> findByInstitutionIdAndRepositoryUrl(UUID institutionId, String repositoryUrl);
+
     Page<Publication> findByInstitutionId(UUID institutionId, Pageable pageable);
 
     @Query("SELECT COUNT(p) FROM Publication p WHERE p.institution.id = :institutionId")
@@ -40,10 +42,10 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
     @Query("SELECT p FROM Publication p WHERE p.institution.id = :institutionId AND p.oaStatusResolved IN :statuses")
     List<Publication> findByInstitutionIdAndOaStatusResolvedIn(@Param("institutionId") UUID institutionId, @Param("statuses") List<OaStatus> statuses);
 
-    @Query("SELECT COUNT(p) FROM Publication p WHERE p.institution.id = :institutionId AND p.foundInRepository = true")
+    @Query("SELECT COUNT(p) FROM Publication p WHERE p.institution.id = :institutionId AND p.repositoryUrl IS NOT NULL")
     long countByInstitutionIdAndFoundInRepositoryTrue(@Param("institutionId") UUID institutionId);
 
-    @Query("SELECT COUNT(p) FROM Publication p WHERE p.institution.id = :institutionId AND p.foundInRepository = true AND (:year IS NULL OR p.publicationYear = :year)")
+    @Query("SELECT COUNT(p) FROM Publication p WHERE p.institution.id = :institutionId AND p.repositoryUrl IS NOT NULL AND (:year IS NULL OR p.publicationYear = :year)")
     long countByInstitutionIdAndFoundInRepositoryTrueAndYear(@Param("institutionId") UUID institutionId, @Param("year") Integer year);
 
     @Query("SELECT p.institution.id, p.institution.name, COUNT(p), " +

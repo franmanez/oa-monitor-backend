@@ -32,7 +32,7 @@ public class RebiunSeed implements CommandLineRunner {
             create("Universidad de Sevilla", "https://ror.org/03yxnpp24", "https://idus.us.es/oai/request", "oai_dc", "US"),
             create("Universidad de Valencia", "https://ror.org/043nxc105", "https://roderic.uv.es/oai/request", "oai_dc", "UV"),
             create("Universidad Politécnica de Madrid", "https://ror.org/03n6nwv02", "https://oa.upm.es/oai/request", "oai_dc", "UPM"),
-            create("Universidad Politécnica de Cataluña", "https://ror.org/03mb6wj31", "https://upcommons.upc.edu/oai/request", "oai_dc", "UPC"),
+            create("Universidad Politécnica de Cataluña", "https://ror.org/03mb6wj31", "https://upcommons.upc.edu/server/oai/revistes", "oai_dc", "UPC"),
             create("Universidad de Zaragoza", "https://ror.org/012a91z28", "https://zaguan.unizar.es/oai/request", "oai_dc", "UNIZAR"),
             create("Universidad del País Vasco", "https://ror.org/000xsnr85", "https://addi.ehu.eus/oai/request", "oai_dc", "UPV-EHU"),
             create("Universidad de Santiago de Compostela", "https://ror.org/030eybx10", "https://minerva.usc.es/oai/request", "oai_dc", "USC"),
@@ -57,7 +57,7 @@ public class RebiunSeed implements CommandLineRunner {
             create("Universidad Politécnica de Valencia", "https://ror.org/01460j859", "https://riunet.upv.es/oai/request", "oai_dc", "UPV"),
             create("Universitat Pompeu Fabra", "https://ror.org/04n0g0b29", "https://repositori.upf.edu/oai/request", "oai_dc", "UPF"),
             create("Universitat de Lleida", "https://ror.org/050c3cw83", "https://repositori.udl.cat/oai/request", "oai_dc", "UDL"),
-            create("Universitat de Girona", "https://ror.org/03mczg773", "https://dugi-doc.udg.edu/oai/request", "oai_dc", "UDG"),
+            create("Universitat de Girona", "https://ror.org/01xdxns91", "http://dugi-doc.udg.edu/dspace-oai/request", "oai_dc", "UDG"),
             create("Universitat Rovira i Virgili", "https://ror.org/010x8gc63", "https://repositori.urv.cat/oai/request", "oai_dc", "URV"),
             create("Universitat Oberta de Catalunya", "https://ror.org/03g49fa86", "https://openaccess.uoc.edu/oai/request", "oai_dc", "UOC"),
             create("Universitat de Vic - Universitat Central de Catalunya", "https://ror.org/03mdmxt95", "https://repositori.uvic.cat/oai/request", "oai_dc", "UVIC-UCC"),
@@ -111,7 +111,12 @@ public class RebiunSeed implements CommandLineRunner {
         inst.setOaiEndpoint(oaiEndpoint);
         inst.setOaiMetadataPrefix(oaiMetadataPrefix);
         inst.setRebiunCode(rebiunCode);
-        inst.setOaiStatus(OaiStatus.ACTIVE);
+        // Solo UPC y UDG activas en el seed; el resto se activa manualmente en BD
+        if ("UPC".equals(rebiunCode) || "UDG".equals(rebiunCode)) {
+            inst.setOaiStatus(OaiStatus.ACTIVE);
+        } else {
+            inst.setOaiStatus(OaiStatus.INACTIVE);
+        }
         return inst;
     }
 }

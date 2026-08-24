@@ -28,3 +28,7 @@ openalex:
   email: openaccess@oamonitor.es
   base-url: https://api.openalex.org
   per-page: 200
+
+logging:
+  level:
+    es.oamonitor.service.OaiPmhHarvestService: INFO

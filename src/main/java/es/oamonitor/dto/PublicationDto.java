@@ -11,8 +11,8 @@ public record PublicationDto(
     String journalName,
     String oaStatusOpenalex,
     String oaStatusResolved,
-    Boolean foundInRepository,
     String repositoryUrl,
+    String source,
     BigDecimal apcEstimatedEur,
     Boolean apcCoveredByAgreement
 ) {}

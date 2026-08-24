@@ -23,6 +23,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-cache")
     implementation("com.opencsv:opencsv:5.9")
+    implementation("se.kb:oai4j:0.6b1")
 
     runtimeOnly("org.mariadb.jdbc:mariadb-java-client")
 

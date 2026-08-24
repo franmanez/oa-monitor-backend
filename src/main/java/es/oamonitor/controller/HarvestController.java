@@ -3,6 +3,7 @@ package es.oamonitor.controller;
 import es.oamonitor.dto.HarvestJobDto;
 import es.oamonitor.model.HarvestJob;
 import es.oamonitor.repository.HarvestJobRepository;
+import es.oamonitor.service.OaiPmhHarvestService;
 import es.oamonitor.service.OpenAlexHarvestService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,11 +17,14 @@ import java.util.UUID;
 public class HarvestController {
 
     private final OpenAlexHarvestService openAlexHarvestService;
+    private final OaiPmhHarvestService oaiPmhHarvestService;
     private final HarvestJobRepository harvestJobRepository;
 
     public HarvestController(OpenAlexHarvestService openAlexHarvestService,
+                             OaiPmhHarvestService oaiPmhHarvestService,
                              HarvestJobRepository harvestJobRepository) {
         this.openAlexHarvestService = openAlexHarvestService;
+        this.oaiPmhHarvestService = oaiPmhHarvestService;
         this.harvestJobRepository = harvestJobRepository;
     }
 
@@ -33,6 +37,18 @@ public class HarvestController {
             return ResponseEntity.ok(toDto(job));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PostMapping("/trigger-oai/{id}")
+    public ResponseEntity<HarvestJobDto> triggerOaiHarvest(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "2024") int year) {
+        try {
+            HarvestJob job = oaiPmhHarvestService.harvestInstitution(id, year);
+            return ResponseEntity.ok(toDto(job));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
         }
     }
 

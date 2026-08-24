@@ -131,6 +131,7 @@ public class ApcImportService {
             prices.add(price);
         }
 
+        repository.deleteAllInBatch();
         repository.saveAll(prices);
 
         double durationSec = (System.currentTimeMillis() - start) / 1000.0;

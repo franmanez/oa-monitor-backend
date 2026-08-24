@@ -32,7 +32,7 @@ public class InstitutionService {
 
     @Transactional(readOnly = true)
     public InstitutionPageResponse getAllInstitutions(Pageable pageable) {
-        Page<InstitutionDto> page = institutionRepository.findAll(pageable)
+        Page<InstitutionDto> page = institutionRepository.findByOaiStatus(OaiStatus.ACTIVE, pageable)
                 .map(this::toDto);
         return new InstitutionPageResponse(
                 page.getContent(),
@@ -233,8 +233,8 @@ public class InstitutionService {
             pub.getJournalName(),
             pub.getOaStatusOpenalex() != null ? pub.getOaStatusOpenalex().name() : null,
             pub.getOaStatusResolved() != null ? pub.getOaStatusResolved().name() : null,
-            pub.getFoundInRepository(),
             pub.getRepositoryUrl(),
+            pub.getSource() != null ? pub.getSource().name() : null,
             pub.getApcEstimatedEur(),
             pub.getApcCoveredByAgreement()
         );

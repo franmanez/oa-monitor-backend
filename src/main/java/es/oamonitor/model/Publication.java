@@ -2,9 +2,9 @@ package es.oamonitor.model;
 
 import es.oamonitor.model.enums.ApcSource;
 import es.oamonitor.model.enums.OaStatus;
+import es.oamonitor.model.enums.PublicationSource;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -47,14 +47,12 @@ public class Publication {
     @Column(name = "oa_status_resolved")
     private OaStatus oaStatusResolved;
 
-    @Column(name = "found_in_repository")
-    private Boolean foundInRepository = false;
-
     @Column(name = "repository_url", length = 1024)
     private String repositoryUrl;
 
-    @Column(name = "embargo_end_date")
-    private LocalDate embargoEndDate;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source")
+    private PublicationSource source;
 
     @Column(name = "apc_estimated_eur", precision = 10, scale = 2)
     private BigDecimal apcEstimatedEur;
@@ -113,14 +111,11 @@ public class Publication {
     public OaStatus getOaStatusResolved() { return oaStatusResolved; }
     public void setOaStatusResolved(OaStatus oaStatusResolved) { this.oaStatusResolved = oaStatusResolved; }
 
-    public Boolean getFoundInRepository() { return foundInRepository; }
-    public void setFoundInRepository(Boolean foundInRepository) { this.foundInRepository = foundInRepository; }
-
     public String getRepositoryUrl() { return repositoryUrl; }
     public void setRepositoryUrl(String repositoryUrl) { this.repositoryUrl = repositoryUrl; }
 
-    public LocalDate getEmbargoEndDate() { return embargoEndDate; }
-    public void setEmbargoEndDate(LocalDate embargoEndDate) { this.embargoEndDate = embargoEndDate; }
+    public PublicationSource getSource() { return source; }
+    public void setSource(PublicationSource source) { this.source = source; }
 
     public BigDecimal getApcEstimatedEur() { return apcEstimatedEur; }
     public void setApcEstimatedEur(BigDecimal apcEstimatedEur) { this.apcEstimatedEur = apcEstimatedEur; }
