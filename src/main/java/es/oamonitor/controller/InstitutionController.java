@@ -82,11 +82,6 @@ public class InstitutionController {
         return institutionService.getAvailableRankingYears();
     }
 
-    @GetMapping("/stats/national")
-    public NationalStatsDto getNationalStats() {
-        return institutionService.getNationalStats();
-    }
-
     @GetMapping("/stats/scatter")
     public List<InstitutionScatterDto> getScatter(@RequestParam int year) {
         return institutionService.getInstitutionScatter(year);

@@ -54,9 +54,6 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
            "FROM Publication p GROUP BY p.institution.id, p.institution.name")
     List<Object[]> aggregateByInstitution();
 
-    @Query("SELECT p.oaStatusResolved, COUNT(p) FROM Publication p GROUP BY p.oaStatusResolved")
-    List<Object[]> nationalStatusCounts();
-
     @Query("SELECT p FROM Publication p WHERE p.institution.id = :institutionId ORDER BY p.publicationYear DESC, p.title")
     List<Publication> findAllByInstitutionId(@Param("institutionId") UUID institutionId);
 
@@ -66,16 +63,12 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
     @Query("SELECT p FROM Publication p WHERE p.institution.id = :institutionId " +
            "AND (:year IS NULL OR p.publicationYear = :year) " +
            "AND (:status IS NULL OR p.oaStatusResolved = :status) " +
-           "AND (:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.doi) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.journalName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
-           "ORDER BY p.publicationYear DESC, p.title")
+           "AND (:search IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.doi) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(p.journalName) LIKE LOWER(CONCAT('%', :search, '%')))")
     Page<Publication> findFiltered(@Param("institutionId") UUID institutionId,
                                    @Param("year") Integer year,
                                    @Param("status") OaStatus status,
                                    @Param("search") String search,
                                    Pageable pageable);
-
-    @Query("SELECT COUNT(p) FROM Publication p")
-    long nationalTotalPublications();
 
     @Query("SELECT p.institution.id, p.institution.name, COUNT(p), " +
            "SUM(CASE WHEN p.oaStatusResolved <> 'CLOSED' THEN 1 ELSE 0 END), " +

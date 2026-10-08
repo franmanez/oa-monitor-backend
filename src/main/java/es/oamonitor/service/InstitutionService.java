@@ -8,7 +8,10 @@ import es.oamonitor.model.enums.OaStatus;
 import es.oamonitor.repository.InstitutionRepository;
 import es.oamonitor.repository.PublicationRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -219,8 +222,23 @@ public class InstitutionService {
     @Transactional(readOnly = true)
     public Page<PublicationDto> getPublicationsFiltered(UUID institutionId, Integer year, String status, String search, Pageable pageable) {
         OaStatus statusEnum = status != null && !status.isEmpty() ? OaStatus.valueOf(status) : null;
-        Page<Publication> page = publicationRepository.findFiltered(institutionId, year, statusEnum, search, pageable);
+        Page<Publication> page = publicationRepository.findFiltered(institutionId, year, statusEnum, search, publicationPageable(pageable));
         return page.map(this::toPublicationDto);
+    }
+
+    private Pageable publicationPageable(Pageable pageable) {
+        Sort base = Sort.by(Sort.Order.desc("publicationYear"), Sort.Order.asc("title"));
+        Sort apcOrder = null;
+        for (Sort.Order order : pageable.getSort()) {
+            if ("apcEstimatedEur".equalsIgnoreCase(order.getProperty())) {
+                apcOrder = order.isDescending()
+                        ? JpaSort.unsafe(Sort.Direction.DESC, "COALESCE(p.apcEstimatedEur, -1)")
+                        : JpaSort.unsafe(Sort.Direction.ASC, "COALESCE(p.apcEstimatedEur, 999999999)");
+                break;
+            }
+        }
+        Sort sort = apcOrder != null ? apcOrder.and(base) : base;
+        return PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), sort);
     }
 
     private PublicationDto toPublicationDto(Publication pub) {
@@ -246,32 +264,6 @@ public class InstitutionService {
             return publicationRepository.findAllByInstitutionIdAndYear(institutionId, year);
         }
         return publicationRepository.findAllByInstitutionId(institutionId);
-    }
-
-    @Transactional(readOnly = true)
-    public NationalStatsDto getNationalStats() {
-        long totalPubs = publicationRepository.nationalTotalPublications();
-        long totalInst = institutionRepository.count();
-
-        List<Object[]> statusRows = publicationRepository.nationalStatusCounts();
-        Map<String, Long> statusCounts = new LinkedHashMap<>();
-        for (OaStatus status : OaStatus.values()) {
-            statusCounts.put(status.name(), 0L);
-        }
-        for (Object[] row : statusRows) {
-            OaStatus status = (OaStatus) row[0];
-            long count = (Long) row[1];
-            statusCounts.put(status.name(), count);
-        }
-
-        long totalClosed = statusCounts.getOrDefault(OaStatus.CLOSED.name(), 0L);
-        long totalOpen = totalPubs - totalClosed;
-        double oaPct = totalPubs > 0 ? Math.round((double) totalOpen / totalPubs * 1000.0) / 10.0 : 0.0;
-
-        return new NationalStatsDto(
-            totalPubs, totalInst, oaPct,
-            totalOpen, totalClosed, statusCounts
-        );
     }
 
     @Transactional(readOnly = true)
