@@ -49,6 +49,22 @@ public class InstitutionService {
     }
 
     @Transactional(readOnly = true)
+    public List<InstitutionDto> getAllForAdmin() {
+        return institutionRepository.findAllByOrderByNameAsc().stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public Optional<InstitutionDto> updateOaiStatus(UUID id, OaiStatus status) {
+        return institutionRepository.findById(id)
+                .map(inst -> {
+                    inst.setOaiStatus(status);
+                    return toDto(institutionRepository.save(inst));
+                });
+    }
+
+    @Transactional(readOnly = true)
     public Optional<InstitutionDto> getById(UUID id) {
         return institutionRepository.findById(id)
                 .map(this::toDto);
@@ -179,6 +195,23 @@ public class InstitutionService {
     }
 
     @Transactional
+    public Optional<InstitutionDto> updateActivationData(UUID id, String rorId, String oaiEndpoint, String oaiMetadataPrefix) {
+        return institutionRepository.findById(id)
+                .map(inst -> {
+                    if (rorId != null && !rorId.isBlank()) {
+                        inst.setRorId(rorId);
+                    }
+                    if (oaiEndpoint != null && !oaiEndpoint.isBlank()) {
+                        inst.setOaiEndpoint(oaiEndpoint);
+                    }
+                    if (oaiMetadataPrefix != null && !oaiMetadataPrefix.isBlank()) {
+                        inst.setOaiMetadataPrefix(oaiMetadataPrefix);
+                    }
+                    return toDto(institutionRepository.save(inst));
+                });
+    }
+
+    @Transactional
     public void updateInstitutionAfterHarvest(Institution institution) {
         institution.setLastHarvestAt(java.time.LocalDateTime.now());
         institutionRepository.save(institution);
@@ -253,8 +286,7 @@ public class InstitutionService {
             pub.getOaStatusResolved() != null ? pub.getOaStatusResolved().name() : null,
             pub.getRepositoryUrl(),
             pub.getSource() != null ? pub.getSource().name() : null,
-            pub.getApcEstimatedEur(),
-            pub.getApcCoveredByAgreement()
+            pub.getApcEstimatedEur()
         );
     }
 

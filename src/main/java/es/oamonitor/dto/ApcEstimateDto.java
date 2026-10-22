@@ -11,7 +11,5 @@ public record ApcEstimateDto(
     int totalPublications,
     int publicationsWithPrice,
     int publicationsWithoutPrice,
-    BigDecimal coveredByAgreements,
-    BigDecimal directCost,
     Map<Integer, ApcYearBreakdown> breakdownByYear
 ) {}

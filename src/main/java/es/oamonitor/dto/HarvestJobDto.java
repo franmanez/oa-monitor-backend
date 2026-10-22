@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 public record HarvestJobDto(
     String id,
-    String institutionName,
+    String institutionCode,
     HarvestType harvestType,
     HarvestStatus status,
     int recordsFetched,

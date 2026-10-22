@@ -30,7 +30,7 @@ public class ApcImportService {
         int totalRows = 0;
         int skippedErrors = 0;
 
-        Map<String, List<CsvRow>> grouped = new HashMap<>();
+        Map<String, Map<Integer, List<CsvRow>>> grouped = new HashMap<>();
 
         try {
             URI uri = URI.create(OPENAPC_URL);
@@ -58,7 +58,7 @@ public class ApcImportService {
                     String euroStr = getCol(line, colIndex, "euro");
                     String journalName = getCol(line, colIndex, "journal_full_title");
                     String publisher = getCol(line, colIndex, "publisher");
-                    String agreement = getCol(line, colIndex, "agreement");
+                    String periodStr = getCol(line, colIndex, "period");
 
                     if (issns == null || issns.isBlank()) {
                         skippedErrors++;
@@ -75,12 +75,27 @@ public class ApcImportService {
                         continue;
                     }
 
+                    Integer year = null;
+                    try {
+                        if (periodStr != null && !periodStr.isBlank()) {
+                            year = Integer.parseInt(periodStr.trim());
+                        }
+                    } catch (NumberFormatException e) {
+                        // year stays null
+                    }
+
+                    if (year == null) {
+                        skippedErrors++;
+                        continue;
+                    }
+
                     List<String> issnList = Arrays.asList(issns.split(";"));
                     for (String issn : issnList) {
                         issn = issn.trim();
                         if (issn.isBlank()) continue;
-                        grouped.computeIfAbsent(issn, k -> new ArrayList<>())
-                                .add(new CsvRow(journalName, publisher, euro, agreement != null ? agreement : ""));
+                        grouped.computeIfAbsent(issn, k -> new HashMap<>())
+                                .computeIfAbsent(year, k -> new ArrayList<>())
+                                .add(new CsvRow(journalName, publisher, euro));
                     }
                 } catch (Exception e) {
                     skippedErrors++;
@@ -94,41 +109,50 @@ public class ApcImportService {
         }
 
         List<JournalApcPrice> prices = new ArrayList<>();
-        for (Map.Entry<String, List<CsvRow>> entry : grouped.entrySet()) {
-            List<CsvRow> rows = entry.getValue();
-            BigDecimal sum = BigDecimal.ZERO;
-            Map<String, Integer> nameCount = new HashMap<>();
-            Map<String, Integer> pubCount = new HashMap<>();
-            Set<String> agreements = new HashSet<>();
+        for (Map.Entry<String, Map<Integer, List<CsvRow>>> issnEntry : grouped.entrySet()) {
+            String issn = issnEntry.getKey();
+            for (Map.Entry<Integer, List<CsvRow>> yearEntry : issnEntry.getValue().entrySet()) {
+                Integer year = yearEntry.getKey();
+                List<CsvRow> rows = yearEntry.getValue();
+                Map<String, Integer> nameCount = new HashMap<>();
+                Map<String, Integer> pubCount = new HashMap<>();
+                List<BigDecimal> euros = new ArrayList<>();
 
-            for (CsvRow row : rows) {
-                sum = sum.add(row.euro);
-                nameCount.merge(row.journalName, 1, Integer::sum);
-                pubCount.merge(row.publisher, 1, Integer::sum);
-                if (!row.agreement.isBlank()) {
-                    agreements.add(row.agreement);
+                for (CsvRow row : rows) {
+                    euros.add(row.euro);
+                    nameCount.merge(row.journalName, 1, Integer::sum);
+                    pubCount.merge(row.publisher, 1, Integer::sum);
                 }
+
+                euros.sort(Comparator.naturalOrder());
+                BigDecimal median;
+                int n = euros.size();
+                if (n % 2 == 1) {
+                    median = euros.get(n / 2);
+                } else {
+                    BigDecimal a = euros.get(n / 2 - 1);
+                    BigDecimal b = euros.get(n / 2);
+                    median = a.add(b).divide(BigDecimal.valueOf(2), 2, java.math.RoundingMode.HALF_UP);
+                }
+
+                String bestName = nameCount.entrySet().stream()
+                        .max(Map.Entry.comparingByValue())
+                        .map(Map.Entry::getKey)
+                        .orElse("");
+                String bestPublisher = pubCount.entrySet().stream()
+                        .max(Map.Entry.comparingByValue())
+                        .map(Map.Entry::getKey)
+                        .orElse("");
+
+                JournalApcPrice price = new JournalApcPrice();
+                price.setIssn(issn);
+                price.setYear(year);
+                price.setJournalName(bestName);
+                price.setPublisher(bestPublisher);
+                price.setApcEur(median);
+                price.setApcSource("openapc_yearly");
+                prices.add(price);
             }
-
-            BigDecimal avg = sum.divide(BigDecimal.valueOf(rows.size()), 2, java.math.RoundingMode.HALF_UP);
-            String bestName = nameCount.entrySet().stream()
-                    .max(Map.Entry.comparingByValue())
-                    .map(Map.Entry::getKey)
-                    .orElse("");
-            String bestPublisher = pubCount.entrySet().stream()
-                    .max(Map.Entry.comparingByValue())
-                    .map(Map.Entry::getKey)
-                    .orElse("");
-            String covered = agreements.isEmpty() ? "" : String.join(",", agreements);
-
-            JournalApcPrice price = new JournalApcPrice();
-            price.setIssn(entry.getKey());
-            price.setJournalName(bestName);
-            price.setPublisher(bestPublisher);
-            price.setApcEur(avg);
-            price.setApcSource("openapc_avg");
-            price.setCoveredByAgreements(covered);
-            prices.add(price);
         }
 
         repository.deleteAllInBatch();
@@ -145,5 +169,5 @@ public class ApcImportService {
         return val != null ? val.trim() : "";
     }
 
-    private record CsvRow(String journalName, String publisher, BigDecimal euro, String agreement) {}
+    private record CsvRow(String journalName, String publisher, BigDecimal euro) {}
 }

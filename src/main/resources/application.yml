@@ -3,12 +3,12 @@ server:
 
 spring:
   application:
-    name: oa-monitor-backend
+    name: openscope-backend
 
   datasource:
-    url: jdbc:mariadb://localhost:3307/oa_monitor
-    username: oamonitor
-    password: oamonitor
+    url: jdbc:mariadb://localhost:3307/openscope
+    username: openscope
+    password: openscope
     driver-class-name: org.mariadb.jdbc.Driver
 
   jpa:
@@ -25,7 +25,8 @@ spring:
       mode: never
 
 openalex:
-  email: openaccess@oamonitor.es
+  email: openaccess@openscope.es
+  api-key: NaIxs0CYQRzW3IFRvn1Dhm
   base-url: https://api.openalex.org
   per-page: 200
 

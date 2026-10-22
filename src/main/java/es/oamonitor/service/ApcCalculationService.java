@@ -51,16 +51,13 @@ public class ApcCalculationService {
                 .findByInstitutionIdAndOaStatusResolvedIn(instId, List.of(OaStatus.GOLD, OaStatus.HYBRID));
 
         for (Publication pub : pubs) {
-            if (pub.getJournalIssn() != null) {
-                Optional<JournalApcPrice> priceOpt = journalApcPriceRepository.findById(pub.getJournalIssn());
+            if (pub.getJournalIssn() != null && pub.getPublicationYear() != null) {
+                Optional<JournalApcPrice> priceOpt = findPriceForYear(pub.getJournalIssn(), pub.getPublicationYear());
                 if (priceOpt.isPresent()) {
                     JournalApcPrice price = priceOpt.get();
                     if (price.getApcEur() != null) {
                         pub.setApcEstimatedEur(price.getApcEur());
                         pub.setApcSource(ApcSource.OPENAPC);
-                        if (price.getCoveredByAgreements() != null && !price.getCoveredByAgreements().isBlank()) {
-                            pub.setApcCoveredByAgreement(true);
-                        }
                     }
                 }
             }
@@ -76,44 +73,36 @@ public class ApcCalculationService {
 
         Map<Integer, ApcYearBreakdown> breakdownByYear = new TreeMap<>(Comparator.reverseOrder());
         BigDecimal totalCost = BigDecimal.ZERO;
-        BigDecimal totalCovered = BigDecimal.ZERO;
         int withPrice = 0;
 
         for (Publication pub : pubs) {
             BigDecimal cost = BigDecimal.ZERO;
-            BigDecimal covered = BigDecimal.ZERO;
             boolean hasPrice = false;
 
-            if (pub.getJournalIssn() != null) {
-                Optional<JournalApcPrice> priceOpt = journalApcPriceRepository.findById(pub.getJournalIssn());
+            if (pub.getJournalIssn() != null && pub.getPublicationYear() != null) {
+                Optional<JournalApcPrice> priceOpt = findPriceForYear(pub.getJournalIssn(), pub.getPublicationYear());
                 if (priceOpt.isPresent()) {
                     JournalApcPrice price = priceOpt.get();
                     if (price.getApcEur() != null) {
                         cost = price.getApcEur();
                         hasPrice = true;
-
-                        if (price.getCoveredByAgreements() != null && !price.getCoveredByAgreements().isBlank()) {
-                            covered = cost;
-                        }
                     }
                 }
             }
 
             totalCost = totalCost.add(cost);
-            totalCovered = totalCovered.add(covered);
             if (hasPrice) withPrice++;
 
             int year = pub.getPublicationYear() != null ? pub.getPublicationYear() : 0;
             ApcYearBreakdown existing = breakdownByYear.get(year);
             if (existing == null) {
-                breakdownByYear.put(year, new ApcYearBreakdown(year, cost, 1, hasPrice ? 1 : 0, covered));
+                breakdownByYear.put(year, new ApcYearBreakdown(year, cost, 1, hasPrice ? 1 : 0));
             } else {
                 breakdownByYear.put(year, new ApcYearBreakdown(
                         year,
                         existing.totalCost().add(cost),
                         existing.publicationsCount() + 1,
-                        existing.publicationsWithPrice() + (hasPrice ? 1 : 0),
-                        existing.coveredByAgreements().add(covered)
+                        existing.publicationsWithPrice() + (hasPrice ? 1 : 0)
                 ));
             }
         }
@@ -125,9 +114,24 @@ public class ApcCalculationService {
                 pubs.size(),
                 withPrice,
                 pubs.size() - withPrice,
-                totalCovered,
-                totalCost.subtract(totalCovered),
                 breakdownByYear
         );
+    }
+
+    private Optional<JournalApcPrice> findPriceForYear(String issn, Integer year) {
+        Optional<JournalApcPrice> exact = journalApcPriceRepository.findByIssnAndYear(issn, year);
+        if (exact.isPresent()) {
+            return exact;
+        }
+        List<JournalApcPrice> allForIssn = journalApcPriceRepository.findAllByIssnOrderByYearDesc(issn);
+        if (allForIssn.isEmpty()) {
+            return Optional.empty();
+        }
+        for (JournalApcPrice price : allForIssn) {
+            if (price.getYear() <= year) {
+                return Optional.of(price);
+            }
+        }
+        return Optional.of(allForIssn.get(0));
     }
 }

@@ -8,6 +8,7 @@ import es.oamonitor.service.OpenAlexHarvestService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,6 +30,7 @@ public class HarvestController {
     }
 
     @PostMapping("/trigger/{id}")
+    @Transactional
     public ResponseEntity<HarvestJobDto> triggerHarvest(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "2024") int year) {
@@ -41,6 +43,7 @@ public class HarvestController {
     }
 
     @PostMapping("/trigger-oai/{id}")
+    @Transactional
     public ResponseEntity<HarvestJobDto> triggerOaiHarvest(
             @PathVariable UUID id,
             @RequestParam(defaultValue = "2024") int year) {
@@ -53,11 +56,13 @@ public class HarvestController {
     }
 
     @GetMapping("/jobs")
+    @Transactional(readOnly = true)
     public Page<HarvestJobDto> getAllJobs(Pageable pageable) {
-        return harvestJobRepository.findAll(pageable).map(this::toDto);
+        return harvestJobRepository.findAllByOrderByStartedAtDesc(pageable).map(this::toDto);
     }
 
     @GetMapping("/jobs/{institutionId}")
+    @Transactional(readOnly = true)
     public Page<HarvestJobDto> getJobsByInstitution(
             @PathVariable UUID institutionId,
             Pageable pageable) {
@@ -68,7 +73,7 @@ public class HarvestController {
     private HarvestJobDto toDto(HarvestJob job) {
         return new HarvestJobDto(
                 job.getId().toString(),
-                job.getInstitution() != null ? job.getInstitution().getName() : null,
+                job.getInstitution() != null ? job.getInstitution().getRebiunCode() : null,
                 job.getHarvestType(),
                 job.getStatus(),
                 job.getRecordsFetched() != null ? job.getRecordsFetched() : 0,

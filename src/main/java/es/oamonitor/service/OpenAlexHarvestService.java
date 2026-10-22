@@ -9,18 +9,24 @@ import es.oamonitor.model.enums.*;
 import es.oamonitor.repository.HarvestJobRepository;
 import es.oamonitor.repository.InstitutionRepository;
 import es.oamonitor.repository.PublicationRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class OpenAlexHarvestService {
 
+    private static final Logger logger = LoggerFactory.getLogger(OpenAlexHarvestService.class);
+    
     private final InstitutionRepository institutionRepository;
     private final PublicationRepository publicationRepository;
     private final HarvestJobRepository harvestJobRepository;
@@ -52,30 +58,62 @@ public class OpenAlexHarvestService {
         job = harvestJobRepository.save(job);
 
         int fetched = 0;
-        int updated = 0;
+        int savedCount = 0;
+        int skippedNoDoi = 0;
+        int pageNum = 0;
+        Set<String> seenDois = new HashSet<>();
         try {
             String cursor = "*";
             while (cursor != null) {
+                pageNum++;
+                logger.info("Fetching page {} with cursor: {}", pageNum, cursor.substring(0, Math.min(50, cursor.length())));
+                
                 JsonNode response = openAlexClient.fetchWorks(institution.getRorId(), year, cursor);
                 JsonNode results = response.get("results");
+                int pageSize = 0;
                 if (results != null && results.isArray()) {
                     for (JsonNode work : results) {
-                        processWork(work, institution);
+                        WorkResult result;
+                        try {
+                            result = processWork(work, institution, seenDois);
+                        } catch (Exception e) {
+                            logger.error("Error processing work: {}", e.getMessage());
+                            fetched++;
+                            pageSize++;
+                            continue;
+                        }
                         fetched++;
-                        updated++;
+                        if (result == WorkResult.SKIPPED_NO_DOI || result == WorkResult.SKIPPED_DUPLICATE) {
+                            skippedNoDoi++;
+                        } else {
+                            savedCount++;
+                        }
+                        pageSize++;
                     }
                 }
+                logger.info("Page {} processed {} works, {} saved to DB", pageNum, pageSize, savedCount);
 
                 JsonNode meta = response.get("meta");
                 JsonNode nextCursor = meta != null ? meta.get("next_cursor") : null;
                 cursor = (nextCursor != null && !nextCursor.isNull()) ? nextCursor.asText() : null;
+                
+                if (cursor != null) {
+                    logger.info("Next cursor found, continuing pagination...");
+                } else {
+                    logger.info("No more pages, pagination complete");
+                }
             }
+            
+            logger.info("Harvest complete: {} fetched from API, {} skipped (no DOI or duplicate), {} saved to DB",
+                    fetched, skippedNoDoi, savedCount);
 
             institutionService.updateInstitutionAfterHarvest(institution);
             job.setStatus(HarvestStatus.COMPLETED);
-            job.setRecordsFetched(fetched);
-            job.setRecordsUpdated(updated);
+            job.setRecordsFetched(savedCount);
+            job.setRecordsUpdated(savedCount);
+            logger.info("Job completed: {} records fetched, {} saved", fetched, savedCount);
         } catch (Exception e) {
+            logger.error("Harvest failed: {}", e.getMessage(), e);
             job.setStatus(HarvestStatus.FAILED);
             job.setErrorMessage(e.getMessage());
         } finally {
@@ -86,9 +124,19 @@ public class OpenAlexHarvestService {
         return job;
     }
 
-    private void processWork(JsonNode work, Institution institution) {
+    private enum WorkResult { CREATED, UPDATED, SKIPPED_NO_DOI, SKIPPED_DUPLICATE }
+
+    private WorkResult processWork(JsonNode work, Institution institution, Set<String> seenDois) {
         String doi = extractDoi(work);
-        if (doi == null) return;
+        if (doi == null) {
+            logger.debug("Skipping work without DOI: {}", extractTitle(work));
+            return WorkResult.SKIPPED_NO_DOI;
+        }
+
+        if (!seenDois.add(doi)) {
+            logger.debug("Skipping duplicate DOI within harvest: {}", doi);
+            return WorkResult.SKIPPED_DUPLICATE;
+        }
 
         Optional<Publication> existing = publicationRepository.findByInstitutionIdAndDoi(institution.getId(), doi);
 
@@ -120,6 +168,8 @@ public class OpenAlexHarvestService {
         }
 
         publicationRepository.save(pub);
+        logger.debug("Saved publication with DOI: {}", doi);
+        return existing.isEmpty() ? WorkResult.CREATED : WorkResult.UPDATED;
     }
 
     private String extractDoi(JsonNode work) {

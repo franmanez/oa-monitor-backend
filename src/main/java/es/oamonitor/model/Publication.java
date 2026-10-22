@@ -61,9 +61,6 @@ public class Publication {
     @Column(name = "apc_source")
     private ApcSource apcSource;
 
-    @Column(name = "apc_covered_by_agreement")
-    private Boolean apcCoveredByAgreement = false;
-
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
@@ -122,9 +119,6 @@ public class Publication {
 
     public ApcSource getApcSource() { return apcSource; }
     public void setApcSource(ApcSource apcSource) { this.apcSource = apcSource; }
-
-    public Boolean getApcCoveredByAgreement() { return apcCoveredByAgreement; }
-    public void setApcCoveredByAgreement(Boolean apcCoveredByAgreement) { this.apcCoveredByAgreement = apcCoveredByAgreement; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

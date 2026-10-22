@@ -13,6 +13,5 @@ public record PublicationDto(
     String oaStatusResolved,
     String repositoryUrl,
     String source,
-    BigDecimal apcEstimatedEur,
-    Boolean apcCoveredByAgreement
+    BigDecimal apcEstimatedEur
 ) {}

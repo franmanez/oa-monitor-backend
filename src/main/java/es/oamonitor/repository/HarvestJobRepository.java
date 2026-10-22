@@ -11,4 +11,6 @@ import java.util.UUID;
 public interface HarvestJobRepository extends JpaRepository<HarvestJob, UUID> {
 
     Page<HarvestJob> findByInstitutionIdOrderByStartedAtDesc(UUID institutionId, Pageable pageable);
+
+    Page<HarvestJob> findAllByOrderByStartedAtDesc(Pageable pageable);
 }

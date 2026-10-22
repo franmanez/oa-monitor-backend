@@ -6,6 +6,5 @@ public record ApcYearBreakdown(
     int year,
     BigDecimal totalCost,
     int publicationsCount,
-    int publicationsWithPrice,
-    BigDecimal coveredByAgreements
+    int publicationsWithPrice
 ) {}

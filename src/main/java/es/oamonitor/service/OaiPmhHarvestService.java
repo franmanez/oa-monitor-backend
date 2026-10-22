@@ -170,7 +170,7 @@ public class OaiPmhHarvestService {
         log.info("[OAI-PMH] Resumen: {} registros procesados, {} artículos año {}, {} creados, {} actualizados, {} rechazados tipo, {} rechazados año",
                 totalFetched, totalArticles, year, totalCreated, totalUpdated, totalSkipped, totalWrongYear);
 
-        return new int[]{totalFetched, totalUpdated};
+        return new int[]{totalArticles, totalCreated + totalUpdated};
     }
 
     private enum ProcessResult {

@@ -1,1 +1,1 @@
-rootProject.name = "oa-monitor-backend"
+rootProject.name = "openscope-backend"

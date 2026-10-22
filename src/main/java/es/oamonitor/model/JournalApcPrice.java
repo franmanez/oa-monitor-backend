@@ -5,11 +5,16 @@ import java.math.BigDecimal;
 
 @Entity
 @Table(name = "journal_apc_price")
+@IdClass(JournalApcPriceId.class)
 public class JournalApcPrice {
 
     @Id
     @Column(length = 20)
     private String issn;
+
+    @Id
+    @Column
+    private Integer year;
 
     @Column(name = "journal_name")
     private String journalName;
@@ -23,11 +28,11 @@ public class JournalApcPrice {
     @Column(name = "apc_source")
     private String apcSource;
 
-    @Column(name = "covered_by_agreements", columnDefinition = "TEXT")
-    private String coveredByAgreements;
-
     public String getIssn() { return issn; }
     public void setIssn(String issn) { this.issn = issn; }
+
+    public Integer getYear() { return year; }
+    public void setYear(Integer year) { this.year = year; }
 
     public String getJournalName() { return journalName; }
     public void setJournalName(String journalName) { this.journalName = journalName; }
@@ -40,7 +45,4 @@ public class JournalApcPrice {
 
     public String getApcSource() { return apcSource; }
     public void setApcSource(String apcSource) { this.apcSource = apcSource; }
-
-    public String getCoveredByAgreements() { return coveredByAgreements; }
-    public void setCoveredByAgreements(String coveredByAgreements) { this.coveredByAgreements = coveredByAgreements; }
 }
