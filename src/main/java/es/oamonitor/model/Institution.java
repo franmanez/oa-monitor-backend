@@ -38,6 +38,9 @@ public class Institution {
     @Column(name = "oai_status")
     private OaiStatus oaiStatus;
 
+    @Column(name = "autonomous_community")
+    private String autonomousCommunity;
+
     @OneToMany(mappedBy = "institution", fetch = FetchType.LAZY)
     private List<Publication> publications = new ArrayList<>();
 
@@ -74,6 +77,9 @@ public class Institution {
 
     public OaiStatus getOaiStatus() { return oaiStatus; }
     public void setOaiStatus(OaiStatus oaiStatus) { this.oaiStatus = oaiStatus; }
+
+    public String getAutonomousCommunity() { return autonomousCommunity; }
+    public void setAutonomousCommunity(String autonomousCommunity) { this.autonomousCommunity = autonomousCommunity; }
 
     public List<Publication> getPublications() { return publications; }
     public void setPublications(List<Publication> publications) { this.publications = publications; }

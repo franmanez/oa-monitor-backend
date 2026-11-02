@@ -48,6 +48,13 @@ public class InstitutionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @GetMapping("/{id}/compliance")
+    public ResponseEntity<ComplianceDto> getCompliance(@PathVariable UUID id, @RequestParam(required = false) Integer year) {
+        return institutionService.getCompliance(id, year)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     @GetMapping("/{id}/apc-estimate")
     public ResponseEntity<ApcEstimateDto> getApcEstimate(@PathVariable UUID id) {
         return institutionService.getApcEstimate(id)
@@ -85,6 +92,11 @@ public class InstitutionController {
     @GetMapping("/stats/scatter")
     public List<InstitutionScatterDto> getScatter(@RequestParam int year) {
         return institutionService.getInstitutionScatter(year);
+    }
+
+    @GetMapping("/stats/regional")
+    public List<RegionalStatsDto> getRegionalStats(@RequestParam(required = false) Integer year) {
+        return institutionService.getRegionalStats(year);
     }
 
     @GetMapping("/{id}/journals/apc")

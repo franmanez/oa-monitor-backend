@@ -335,6 +335,130 @@ public class InstitutionService {
                 }).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ComplianceDto> getCompliance(UUID id, Integer year) {
+        return institutionRepository.findById(id)
+                .map(inst -> {
+                    UUID instId = inst.getId();
+                    long total;
+                    Map<String, Long> statusCounts = new LinkedHashMap<>();
+                    long foundRepo;
+
+                    if (year != null) {
+                        total = publicationRepository.countByInstitutionIdAndPublicationYear(instId, year);
+                        for (OaStatus status : OaStatus.values()) {
+                            long count = publicationRepository.countByInstitutionIdAndOaStatusResolvedAndPublicationYear(instId, status, year);
+                            statusCounts.put(status.name(), count);
+                        }
+                        foundRepo = publicationRepository.countByInstitutionIdAndFoundInRepositoryTrueAndYear(instId, year);
+                    } else {
+                        total = publicationRepository.countByInstitutionId(instId);
+                        for (OaStatus status : OaStatus.values()) {
+                            long count = publicationRepository.countByInstitutionIdAndOaStatusResolved(instId, status);
+                            statusCounts.put(status.name(), count);
+                        }
+                        foundRepo = publicationRepository.countByInstitutionIdAndFoundInRepositoryTrue(instId);
+                    }
+
+                    long diamond = statusCounts.getOrDefault(OaStatus.DIAMOND.name(), 0L);
+                    long gold = statusCounts.getOrDefault(OaStatus.GOLD.name(), 0L);
+                    long green = statusCounts.getOrDefault(OaStatus.GREEN.name(), 0L);
+                    long closed = statusCounts.getOrDefault(OaStatus.CLOSED.name(), 0L);
+
+                    long strongOaCount = diamond + gold + green;
+                    long broadOaCount = total - closed;
+
+                    double strongOaPct = total > 0 ? Math.round((double) strongOaCount / total * 1000.0) / 10.0 : 0.0;
+                    double repositoryPct = total > 0 ? Math.round((double) foundRepo / total * 1000.0) / 10.0 : 0.0;
+                    double broadOaPct = total > 0 ? Math.round((double) broadOaCount / total * 1000.0) / 10.0 : 0.0;
+
+                    double overallScore = Math.round((strongOaPct * 0.4 + repositoryPct * 0.3 + broadOaPct * 0.3) * 10.0) / 10.0;
+                    String grade = calculateGrade(overallScore);
+
+                    return new ComplianceDto(
+                            inst.getId().toString(),
+                            inst.getName(),
+                            year,
+                            total,
+                            strongOaPct,
+                            repositoryPct,
+                            broadOaPct,
+                            overallScore,
+                            grade,
+                            strongOaCount,
+                            foundRepo,
+                            broadOaCount
+                    );
+                });
+    }
+
+    private String calculateGrade(double score) {
+        if (score >= 90) return "A+";
+        if (score >= 80) return "A";
+        if (score >= 70) return "B+";
+        if (score >= 60) return "B";
+        if (score >= 50) return "C+";
+        if (score >= 40) return "C";
+        if (score >= 30) return "D";
+        return "F";
+    }
+
+    @Transactional(readOnly = true)
+    public List<RegionalStatsDto> getRegionalStats(Integer year) {
+        List<Object[]> rows;
+        if (year != null) {
+            rows = publicationRepository.aggregateByCommunityAndYear(year);
+        } else {
+            rows = publicationRepository.aggregateByCommunity();
+        }
+        return rows.stream().map(row -> {
+            String community = (String) row[0];
+            int universityCount = ((Long) row[1]).intValue();
+            long total = (Long) row[2];
+            long diamond = (Long) row[3];
+            long gold = (Long) row[4];
+            long green = (Long) row[5];
+            long hybrid = (Long) row[6];
+            long bronze = (Long) row[7];
+            long closed = (Long) row[8];
+            long repo = (Long) row[9];
+
+            long strongOa = diamond + gold + green;
+            long broadOa = total - closed;
+
+            double oaPct = total > 0 ? Math.round((double) broadOa / total * 1000.0) / 10.0 : 0.0;
+            double strongOaPct = total > 0 ? Math.round((double) strongOa / total * 1000.0) / 10.0 : 0.0;
+            double repositoryPct = total > 0 ? Math.round((double) repo / total * 1000.0) / 10.0 : 0.0;
+            double diamondPct = total > 0 ? Math.round((double) diamond / total * 1000.0) / 10.0 : 0.0;
+            double goldPct = total > 0 ? Math.round((double) gold / total * 1000.0) / 10.0 : 0.0;
+            double greenPct = total > 0 ? Math.round((double) green / total * 1000.0) / 10.0 : 0.0;
+            double hybridPct = total > 0 ? Math.round((double) hybrid / total * 1000.0) / 10.0 : 0.0;
+            double bronzePct = total > 0 ? Math.round((double) bronze / total * 1000.0) / 10.0 : 0.0;
+            double closedPct = total > 0 ? Math.round((double) closed / total * 1000.0) / 10.0 : 0.0;
+
+            double complianceScore = Math.round((strongOaPct * 0.4 + repositoryPct * 0.3 + oaPct * 0.3) * 10.0) / 10.0;
+            String grade = calculateGrade(complianceScore);
+
+            return new RegionalStatsDto(
+                    community,
+                    universityCount,
+                    total,
+                    oaPct,
+                    strongOaPct,
+                    repositoryPct,
+                    diamondPct,
+                    goldPct,
+                    greenPct,
+                    hybridPct,
+                    bronzePct,
+                    closedPct,
+                    complianceScore,
+                    grade
+            );
+        }).sorted(Comparator.comparingDouble(RegionalStatsDto::oaPercentage).reversed())
+         .collect(Collectors.toList());
+    }
+
     private InstitutionDto toDto(Institution inst) {
         long total = publicationRepository.countByInstitutionId(inst.getId());
         return new InstitutionDto(
@@ -346,6 +470,7 @@ public class InstitutionService {
                 inst.getRebiunCode(),
                 inst.getLastHarvestAt(),
                 inst.getOaiStatus(),
+                inst.getAutonomousCommunity(),
                 total
         );
     }

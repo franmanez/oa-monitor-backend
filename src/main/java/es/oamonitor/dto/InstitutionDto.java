@@ -12,5 +12,6 @@ public record InstitutionDto(
     String rebiunCode,
     LocalDateTime lastHarvestAt,
     OaiStatus oaiStatus,
+    String autonomousCommunity,
     long totalPublications
 ) {}

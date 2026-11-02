@@ -103,4 +103,36 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
            "FROM Publication p WHERE p.publicationYear = :year " +
            "GROUP BY p.institution.id, p.institution.name")
     List<Object[]> aggregateInstitutionScatter(@Param("year") int year);
+
+    @Query("SELECT p.institution.autonomousCommunity, " +
+           "COUNT(DISTINCT p.institution.id), " +
+           "COUNT(p), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'DIAMOND' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'GOLD' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'GREEN' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'HYBRID' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'BRONZE' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'CLOSED' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.repositoryUrl IS NOT NULL THEN 1 ELSE 0 END) " +
+           "FROM Publication p WHERE p.publicationYear = :year " +
+           "AND p.institution.autonomousCommunity IS NOT NULL " +
+           "GROUP BY p.institution.autonomousCommunity " +
+           "ORDER BY p.institution.autonomousCommunity")
+    List<Object[]> aggregateByCommunityAndYear(@Param("year") int year);
+
+    @Query("SELECT p.institution.autonomousCommunity, " +
+           "COUNT(DISTINCT p.institution.id), " +
+           "COUNT(p), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'DIAMOND' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'GOLD' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'GREEN' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'HYBRID' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'BRONZE' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'CLOSED' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.repositoryUrl IS NOT NULL THEN 1 ELSE 0 END) " +
+           "FROM Publication p " +
+           "WHERE p.institution.autonomousCommunity IS NOT NULL " +
+           "GROUP BY p.institution.autonomousCommunity " +
+           "ORDER BY p.institution.autonomousCommunity")
+    List<Object[]> aggregateByCommunity();
 }
