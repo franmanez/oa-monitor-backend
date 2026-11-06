@@ -135,4 +135,36 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
            "GROUP BY p.institution.autonomousCommunity " +
            "ORDER BY p.institution.autonomousCommunity")
     List<Object[]> aggregateByCommunity();
+
+    @Query("SELECT p.publicationYear, " +
+           "COUNT(p), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'DIAMOND' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'GOLD' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'GREEN' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'HYBRID' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'BRONZE' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.oaStatusResolved = 'CLOSED' THEN 1 ELSE 0 END), " +
+           "SUM(CASE WHEN p.repositoryUrl IS NOT NULL THEN 1 ELSE 0 END) " +
+           "FROM Publication p WHERE p.institution.id = :institutionId " +
+           "AND p.publicationYear IS NOT NULL " +
+           "GROUP BY p.publicationYear " +
+           "ORDER BY p.publicationYear")
+    List<Object[]> aggregateHistoricalByInstitution(@Param("institutionId") UUID institutionId);
+
+    @Query("SELECT p.publicationYear, COUNT(p), COALESCE(SUM(p.apcEstimatedEur), 0) " +
+           "FROM Publication p WHERE p.institution.id = :institutionId " +
+           "AND p.oaStatusResolved IN ('GOLD', 'HYBRID') " +
+           "AND p.publicationYear IS NOT NULL " +
+           "GROUP BY p.publicationYear " +
+           "ORDER BY p.publicationYear")
+    List<Object[]> aggregateApcHistoricalByInstitution(@Param("institutionId") UUID institutionId);
+
+    @Query("SELECT p.journalName, p.journalIssn, COUNT(p), COALESCE(SUM(p.apcEstimatedEur), 0) " +
+           "FROM Publication p WHERE p.institution.id = :institutionId " +
+           "AND p.oaStatusResolved IN ('GOLD', 'HYBRID') " +
+           "AND p.apcEstimatedEur IS NOT NULL " +
+           "AND p.publicationYear = :year " +
+           "GROUP BY p.journalName, p.journalIssn " +
+           "ORDER BY SUM(p.apcEstimatedEur) DESC")
+    List<Object[]> journalApcByInstitutionAndYear(@Param("institutionId") UUID institutionId, @Param("year") int year);
 }
