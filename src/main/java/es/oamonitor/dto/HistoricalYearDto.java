@@ -12,12 +12,9 @@ public record HistoricalYearDto(
     long bronzeCount,
     long closedCount,
     long repositoryCount,
-    double oaPercentage,
     double strongOaPct,
     double repositoryPct,
     double broadOaPct,
-    double complianceScore,
-    String complianceGrade,
     double totalApcCost,
     int articlesWithApc,
     double averageApc

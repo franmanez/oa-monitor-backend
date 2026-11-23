@@ -48,13 +48,6 @@ public class InstitutionController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/{id}/compliance")
-    public ResponseEntity<ComplianceDto> getCompliance(@PathVariable UUID id, @RequestParam(required = false) Integer year) {
-        return institutionService.getCompliance(id, year)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
     @GetMapping("/{id}/apc-estimate")
     public ResponseEntity<ApcEstimateDto> getApcEstimate(@PathVariable UUID id) {
         return institutionService.getApcEstimate(id)
@@ -100,13 +93,30 @@ public class InstitutionController {
     }
 
     @GetMapping("/{id}/journals/apc")
-    public List<JournalApcDto> getJournalsByApc(@PathVariable UUID id, @RequestParam(required = false) Integer year) {
-        return institutionService.getJournalsByApc(id, year);
+    public List<JournalApcDto> getJournalsByApc(@PathVariable UUID id, @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer limit) {
+        return institutionService.getJournalsByApc(id, year, limit);
     }
 
-    @GetMapping("/{id}/journals/top")
-    public List<JournalCountDto> getTopJournals(@PathVariable UUID id, @RequestParam(required = false) Integer year, @RequestParam(defaultValue = "10") int limit) {
-        return institutionService.getTopJournals(id, year, limit);
+    @GetMapping("/{id}/journals/articles")
+    public List<JournalArticleDto> getJournalArticles(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Integer year,
+            @RequestParam String journal) {
+        return institutionService.getJournalArticles(id, year, journal);
+    }
+
+    @GetMapping("/{id}/publishers")
+    public List<PublisherApcDto> getPublishers(@PathVariable UUID id, @RequestParam(required = false) Integer year) {
+        return institutionService.getPublishersApc(id, year);
+    }
+
+    @GetMapping("/{id}/publishers/articles")
+    public List<PublisherArticleDto> getPublisherArticles(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Integer year,
+            @RequestParam String publisher) {
+        return institutionService.getPublisherArticles(id, year, publisher);
     }
 
     @GetMapping("/{id}/export")

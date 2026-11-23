@@ -12,7 +12,5 @@ public record RegionalStatsDto(
     double greenPct,
     double hybridPct,
     double bronzePct,
-    double closedPct,
-    double complianceScore,
-    String complianceGrade
+    double closedPct
 ) {}

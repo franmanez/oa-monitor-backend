@@ -58,13 +58,9 @@ public class HistoricalService {
                         long strongOaCount = diamond + gold + green;
                         long broadOaCount = total - closed;
 
-                        double oaPercentage = total > 0 ? Math.round((double) broadOaCount / total * 1000.0) / 10.0 : 0.0;
+                        double broadOaPct = total > 0 ? Math.round((double) broadOaCount / total * 1000.0) / 10.0 : 0.0;
                         double strongOaPct = total > 0 ? Math.round((double) strongOaCount / total * 1000.0) / 10.0 : 0.0;
                         double repositoryPct = total > 0 ? Math.round((double) repository / total * 1000.0) / 10.0 : 0.0;
-                        double broadOaPct = oaPercentage;
-
-                        double complianceScore = Math.round((strongOaPct * 0.4 + repositoryPct * 0.3 + broadOaPct * 0.3) * 10.0) / 10.0;
-                        String complianceGrade = calculateGrade(complianceScore);
 
                         // APC data for this year
                         double totalApcCost = 0.0;
@@ -86,12 +82,9 @@ public class HistoricalService {
                                 bronze,
                                 closed,
                                 repository,
-                                oaPercentage,
                                 strongOaPct,
                                 repositoryPct,
                                 broadOaPct,
-                                complianceScore,
-                                complianceGrade,
                                 totalApcCost,
                                 articlesWithApc,
                                 averageApc
@@ -120,16 +113,5 @@ public class HistoricalService {
     @Transactional(readOnly = true)
     public List<Integer> getAvailableYears(UUID institutionId) {
         return publicationRepository.findDistinctYearsByInstitutionId(institutionId);
-    }
-
-    private String calculateGrade(double score) {
-        if (score >= 90) return "A+";
-        if (score >= 80) return "A";
-        if (score >= 70) return "B+";
-        if (score >= 60) return "B";
-        if (score >= 50) return "C+";
-        if (score >= 40) return "C";
-        if (score >= 30) return "D";
-        return "F";
     }
 }

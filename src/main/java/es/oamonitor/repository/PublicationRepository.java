@@ -89,13 +89,6 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
            "ORDER BY SUM(p.apcEstimatedEur) DESC")
     List<Object[]> journalApcByInstitution(@Param("institutionId") UUID institutionId, @Param("year") Integer year);
 
-    @Query("SELECT p.journalName, p.journalIssn, COUNT(p) " +
-           "FROM Publication p WHERE p.institution.id = :institutionId " +
-           "AND (:year IS NULL OR p.publicationYear = :year) " +
-           "GROUP BY p.journalName, p.journalIssn " +
-           "ORDER BY COUNT(p) DESC")
-    List<Object[]> topJournalsByInstitution(@Param("institutionId") UUID institutionId, @Param("year") Integer year);
-
     @Query("SELECT p.institution.id, p.institution.name, COUNT(p), " +
            "SUM(CASE WHEN p.oaStatusResolved <> 'CLOSED' THEN 1 ELSE 0 END), " +
            "COALESCE(SUM(p.apcEstimatedEur), 0), " +
@@ -135,6 +128,12 @@ public interface PublicationRepository extends JpaRepository<Publication, UUID> 
            "GROUP BY p.institution.autonomousCommunity " +
            "ORDER BY p.institution.autonomousCommunity")
     List<Object[]> aggregateByCommunity();
+
+    @Query("SELECT p FROM Publication p WHERE p.institution.id = :institutionId " +
+           "AND p.apcEstimatedEur IS NOT NULL " +
+           "AND (:year IS NULL OR p.publicationYear = :year) " +
+           "ORDER BY p.apcEstimatedEur DESC")
+    List<Publication> findWithApcByInstitution(@Param("institutionId") UUID institutionId, @Param("year") Integer year);
 
     @Query("SELECT p.publicationYear, " +
            "COUNT(p), " +

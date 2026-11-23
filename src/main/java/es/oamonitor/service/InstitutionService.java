@@ -24,13 +24,16 @@ public class InstitutionService {
     private final InstitutionRepository institutionRepository;
     private final PublicationRepository publicationRepository;
     private final ApcCalculationService apcCalculationService;
+    private final PublisherApcService publisherApcService;
 
     public InstitutionService(InstitutionRepository institutionRepository,
                               PublicationRepository publicationRepository,
-                              ApcCalculationService apcCalculationService) {
+                              ApcCalculationService apcCalculationService,
+                              PublisherApcService publisherApcService) {
         this.institutionRepository = institutionRepository;
         this.publicationRepository = publicationRepository;
         this.apcCalculationService = apcCalculationService;
+        this.publisherApcService = publisherApcService;
     }
 
     @Transactional(readOnly = true)
@@ -299,24 +302,15 @@ public class InstitutionService {
     }
 
     @Transactional(readOnly = true)
-    public List<JournalApcDto> getJournalsByApc(UUID institutionId, Integer year) {
-        return publicationRepository.journalApcByInstitution(institutionId, year).stream()
+    public List<JournalApcDto> getJournalsByApc(UUID institutionId, Integer year, Integer limit) {
+        var rows = publicationRepository.journalApcByInstitution(institutionId, year).stream();
+        if (limit != null && limit > 0) rows = rows.limit(limit);
+        return rows
                 .map(row -> new JournalApcDto(
                         (String) row[0],
                         (String) row[1],
                         (Long) row[2],
                         (java.math.BigDecimal) row[3]
-                )).collect(Collectors.toList());
-    }
-
-    @Transactional(readOnly = true)
-    public List<JournalCountDto> getTopJournals(UUID institutionId, Integer year, int limit) {
-        return publicationRepository.topJournalsByInstitution(institutionId, year).stream()
-                .limit(limit)
-                .map(row -> new JournalCountDto(
-                        (String) row[0],
-                        (String) row[1],
-                        (Long) row[2]
                 )).collect(Collectors.toList());
     }
 
@@ -336,71 +330,31 @@ public class InstitutionService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<ComplianceDto> getCompliance(UUID id, Integer year) {
-        return institutionRepository.findById(id)
-                .map(inst -> {
-                    UUID instId = inst.getId();
-                    long total;
-                    Map<String, Long> statusCounts = new LinkedHashMap<>();
-                    long foundRepo;
-
-                    if (year != null) {
-                        total = publicationRepository.countByInstitutionIdAndPublicationYear(instId, year);
-                        for (OaStatus status : OaStatus.values()) {
-                            long count = publicationRepository.countByInstitutionIdAndOaStatusResolvedAndPublicationYear(instId, status, year);
-                            statusCounts.put(status.name(), count);
-                        }
-                        foundRepo = publicationRepository.countByInstitutionIdAndFoundInRepositoryTrueAndYear(instId, year);
-                    } else {
-                        total = publicationRepository.countByInstitutionId(instId);
-                        for (OaStatus status : OaStatus.values()) {
-                            long count = publicationRepository.countByInstitutionIdAndOaStatusResolved(instId, status);
-                            statusCounts.put(status.name(), count);
-                        }
-                        foundRepo = publicationRepository.countByInstitutionIdAndFoundInRepositoryTrue(instId);
-                    }
-
-                    long diamond = statusCounts.getOrDefault(OaStatus.DIAMOND.name(), 0L);
-                    long gold = statusCounts.getOrDefault(OaStatus.GOLD.name(), 0L);
-                    long green = statusCounts.getOrDefault(OaStatus.GREEN.name(), 0L);
-                    long closed = statusCounts.getOrDefault(OaStatus.CLOSED.name(), 0L);
-
-                    long strongOaCount = diamond + gold + green;
-                    long broadOaCount = total - closed;
-
-                    double strongOaPct = total > 0 ? Math.round((double) strongOaCount / total * 1000.0) / 10.0 : 0.0;
-                    double repositoryPct = total > 0 ? Math.round((double) foundRepo / total * 1000.0) / 10.0 : 0.0;
-                    double broadOaPct = total > 0 ? Math.round((double) broadOaCount / total * 1000.0) / 10.0 : 0.0;
-
-                    double overallScore = Math.round((strongOaPct * 0.4 + repositoryPct * 0.3 + broadOaPct * 0.3) * 10.0) / 10.0;
-                    String grade = calculateGrade(overallScore);
-
-                    return new ComplianceDto(
-                            inst.getId().toString(),
-                            inst.getName(),
-                            year,
-                            total,
-                            strongOaPct,
-                            repositoryPct,
-                            broadOaPct,
-                            overallScore,
-                            grade,
-                            strongOaCount,
-                            foundRepo,
-                            broadOaCount
-                    );
-                });
+    public List<PublisherApcDto> getPublishersApc(UUID institutionId, Integer year) {
+        return publisherApcService.getPublishersApc(institutionId, year);
     }
 
-    private String calculateGrade(double score) {
-        if (score >= 90) return "A+";
-        if (score >= 80) return "A";
-        if (score >= 70) return "B+";
-        if (score >= 60) return "B";
-        if (score >= 50) return "C+";
-        if (score >= 40) return "C";
-        if (score >= 30) return "D";
-        return "F";
+    @Transactional(readOnly = true)
+    public List<PublisherArticleDto> getPublisherArticles(UUID institutionId, Integer year, String publisher) {
+        return publisherApcService.getPublisherArticles(institutionId, year, publisher);
+    }
+
+    @Transactional(readOnly = true)
+    public List<JournalArticleDto> getJournalArticles(UUID institutionId, Integer year, String journal) {
+        List<Publication> pubs = publicationRepository.findWithApcByInstitution(institutionId, year);
+        return pubs.stream()
+                .filter(p -> journal.equals(p.getJournalName() == null || p.getJournalName().isBlank()
+                        ? "Sin nombre" : p.getJournalName()))
+                .sorted(Comparator.comparing(Publication::getApcEstimatedEur).reversed())
+                .map(p -> new JournalArticleDto(
+                        p.getId().toString(),
+                        p.getDoi(),
+                        p.getTitle(),
+                        p.getJournalName(),
+                        p.getJournalIssn(),
+                        p.getApcEstimatedEur(),
+                        p.getOaStatusResolved() != null ? p.getOaStatusResolved().name() : null))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -436,9 +390,6 @@ public class InstitutionService {
             double bronzePct = total > 0 ? Math.round((double) bronze / total * 1000.0) / 10.0 : 0.0;
             double closedPct = total > 0 ? Math.round((double) closed / total * 1000.0) / 10.0 : 0.0;
 
-            double complianceScore = Math.round((strongOaPct * 0.4 + repositoryPct * 0.3 + oaPct * 0.3) * 10.0) / 10.0;
-            String grade = calculateGrade(complianceScore);
-
             return new RegionalStatsDto(
                     community,
                     universityCount,
@@ -451,9 +402,7 @@ public class InstitutionService {
                     greenPct,
                     hybridPct,
                     bronzePct,
-                    closedPct,
-                    complianceScore,
-                    grade
+                    closedPct
             );
         }).sorted(Comparator.comparingDouble(RegionalStatsDto::oaPercentage).reversed())
          .collect(Collectors.toList());
