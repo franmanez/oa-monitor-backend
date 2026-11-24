@@ -13,5 +13,8 @@ public record PublicationDto(
     String oaStatusResolved,
     String repositoryUrl,
     String source,
-    BigDecimal apcEstimatedEur
+    BigDecimal apcEstimatedEur,
+    String field,
+    String subfield,
+    String topic
 ) {}

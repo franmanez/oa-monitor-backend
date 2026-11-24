@@ -39,6 +39,17 @@ public class Publication {
     @Column(name = "journal_name")
     private String journalName;
 
+    // Clasificación temática de OpenAlex (primary_topic). Los artículos que
+    // solo vienen del repositorio OAI-PMH nacen sin ella (null).
+    @Column(name = "oa_topic", length = 150)
+    private String topic;
+
+    @Column(name = "oa_subfield", length = 150)
+    private String subfield;
+
+    @Column(name = "oa_field", length = 150)
+    private String field;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "oa_status_openalex")
     private OaStatus oaStatusOpenalex;
@@ -101,6 +112,15 @@ public class Publication {
 
     public String getJournalName() { return journalName; }
     public void setJournalName(String journalName) { this.journalName = journalName; }
+
+    public String getTopic() { return topic; }
+    public void setTopic(String topic) { this.topic = topic; }
+
+    public String getSubfield() { return subfield; }
+    public void setSubfield(String subfield) { this.subfield = subfield; }
+
+    public String getField() { return field; }
+    public void setField(String field) { this.field = field; }
 
     public OaStatus getOaStatusOpenalex() { return oaStatusOpenalex; }
     public void setOaStatusOpenalex(OaStatus oaStatusOpenalex) { this.oaStatusOpenalex = oaStatusOpenalex; }

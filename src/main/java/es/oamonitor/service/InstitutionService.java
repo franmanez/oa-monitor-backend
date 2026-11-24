@@ -15,6 +15,8 @@ import org.springframework.data.jpa.domain.JpaSort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -289,7 +291,10 @@ public class InstitutionService {
             pub.getOaStatusResolved() != null ? pub.getOaStatusResolved().name() : null,
             pub.getRepositoryUrl(),
             pub.getSource() != null ? pub.getSource().name() : null,
-            pub.getApcEstimatedEur()
+            pub.getApcEstimatedEur(),
+            pub.getField(),
+            pub.getSubfield(),
+            pub.getTopic()
         );
     }
 
@@ -357,9 +362,92 @@ public class InstitutionService {
                 .collect(Collectors.toList());
     }
 
+    // ---- Áreas temáticas (primary_topic.field de OpenAlex) ----
+
+    private static final String UNCLASSIFIED_FIELD = "Sin clasificar";
+
     @Transactional(readOnly = true)
-    public List<RegionalStatsDto> getRegionalStats(Integer year) {
-        List<Object[]> rows;
+    public List<FieldStatsDto> getFieldStats(UUID institutionId, Integer year) {
+        List<Publication> pubs = publicationRepository.findAllByInstitutionIdAndYear(institutionId, year);
+        if (pubs.isEmpty()) return List.of();
+
+        Map<String, List<Publication>> byField = new LinkedHashMap<>();
+        for (Publication p : pubs) {
+            String field = p.getField() == null || p.getField().isBlank() ? UNCLASSIFIED_FIELD : p.getField();
+            byField.computeIfAbsent(field, k -> new ArrayList<>()).add(p);
+        }
+
+        long total = pubs.size();
+        return byField.entrySet().stream().map(entry -> {
+            List<Publication> list = entry.getValue();
+            long count = list.size();
+            long diamond = 0, gold = 0, green = 0, hybrid = 0, bronze = 0, closed = 0, repo = 0, withApc = 0;
+            BigDecimal apcTotal = BigDecimal.ZERO;
+            for (Publication p : list) {
+                OaStatus status = p.getOaStatusResolved();
+                if (status == null) {
+                    closed++;
+                } else {
+                    switch (status) {
+                        case DIAMOND -> diamond++;
+                        case GOLD -> gold++;
+                        case GREEN -> green++;
+                        case HYBRID -> hybrid++;
+                        case BRONZE -> bronze++;
+                        case CLOSED -> closed++;
+                    }
+                }
+                if (p.getRepositoryUrl() != null) repo++;
+                if (p.getApcEstimatedEur() != null) {
+                    apcTotal = apcTotal.add(p.getApcEstimatedEur());
+                    withApc++;
+                }
+            }
+            double broadOaPct = round1((count - closed) * 100.0 / count);
+            double strongOaPct = round1((diamond + gold + green) * 100.0 / count);
+            double repositoryPct = round1(repo * 100.0 / count);
+            BigDecimal averageApc = withApc > 0
+                    ? apcTotal.divide(BigDecimal.valueOf(withApc), 0, RoundingMode.HALF_UP)
+                    : null;
+            return new FieldStatsDto(
+                    entry.getKey(), count, round1(count * 100.0 / total),
+                    diamond, gold, green, hybrid, bronze, closed,
+                    broadOaPct, strongOaPct, repo, repositoryPct,
+                    apcTotal, withApc, averageApc);
+        })
+        .sorted(Comparator.comparingLong(FieldStatsDto::articleCount).reversed())
+        .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<FieldArticleDto> getFieldArticles(UUID institutionId, Integer year, String field) {
+        List<Publication> pubs = publicationRepository.findAllByInstitutionIdAndYear(institutionId, year);
+        return pubs.stream()
+                .filter(p -> field.equals(p.getField() == null || p.getField().isBlank()
+                        ? UNCLASSIFIED_FIELD : p.getField()))
+                .sorted(Comparator.comparing(
+                        (Publication p) -> p.getApcEstimatedEur() != null ? p.getApcEstimatedEur() : BigDecimal.ZERO,
+                        Comparator.reverseOrder()))
+                .limit(500)
+                .map(p -> new FieldArticleDto(
+                        p.getId().toString(),
+                        p.getDoi(),
+                        p.getTitle(),
+                        p.getJournalName(),
+                        p.getPublicationYear(),
+                        p.getSubfield(),
+                        p.getTopic(),
+                        p.getOaStatusResolved() != null ? p.getOaStatusResolved().name() : null,
+                        p.getApcEstimatedEur()))
+                .collect(Collectors.toList());
+    }
+
+    private static double round1(double value) {
+        return Math.round(value * 10.0) / 10.0;
+    }
+
+    @Transactional(readOnly = true)
+    public List<RegionalStatsDto> getRegionalStats(Integer year) {        List<Object[]> rows;
         if (year != null) {
             rows = publicationRepository.aggregateByCommunityAndYear(year);
         } else {

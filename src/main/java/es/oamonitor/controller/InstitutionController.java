@@ -119,13 +119,26 @@ public class InstitutionController {
         return institutionService.getPublisherArticles(id, year, publisher);
     }
 
+    @GetMapping("/{id}/fields")
+    public List<FieldStatsDto> getFields(@PathVariable UUID id, @RequestParam(required = false) Integer year) {
+        return institutionService.getFieldStats(id, year);
+    }
+
+    @GetMapping("/{id}/fields/articles")
+    public List<FieldArticleDto> getFieldArticles(
+            @PathVariable UUID id,
+            @RequestParam(required = false) Integer year,
+            @RequestParam String field) {
+        return institutionService.getFieldArticles(id, year, field);
+    }
+
     @GetMapping("/{id}/export")
     public ResponseEntity<org.springframework.core.io.Resource> exportCsv(
             @PathVariable UUID id,
             @RequestParam(required = false) Integer year) {
         var pubs = institutionService.getPublicationsForExport(id, year);
         var sb = new StringBuilder();
-        sb.append("DOI,Título,Año,Revista,ISSN,Estado OA OpenAlex,Estado OA Resuelto,URL repositorio,Fuente,APC estimado €\n");
+        sb.append("DOI,Título,Año,Revista,ISSN,Estado OA OpenAlex,Estado OA Resuelto,URL repositorio,Fuente,APC estimado €,Área (field),Subárea,Tema\n");
         for (var pub : pubs) {
             sb.append(escapeCsv(pub.getDoi())).append(',');
             sb.append(escapeCsv(pub.getTitle())).append(',');
@@ -136,7 +149,10 @@ public class InstitutionController {
             sb.append(pub.getOaStatusResolved() != null ? pub.getOaStatusResolved().name() : "").append(',');
             sb.append(escapeCsv(pub.getRepositoryUrl())).append(',');
             sb.append(pub.getSource() != null ? pub.getSource().name() : "").append(',');
-            sb.append(pub.getApcEstimatedEur() != null ? pub.getApcEstimatedEur().toString() : "").append('\n');
+            sb.append(pub.getApcEstimatedEur() != null ? pub.getApcEstimatedEur().toString() : "").append(',');
+            sb.append(escapeCsv(pub.getField())).append(',');
+            sb.append(escapeCsv(pub.getSubfield())).append(',');
+            sb.append(escapeCsv(pub.getTopic())).append('\n');
         }
 
         byte[] bytes = sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);

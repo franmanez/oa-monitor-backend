@@ -149,6 +149,7 @@ public class OpenAlexHarvestService {
         String issn = extractIssn(work);
         pub.setJournalIssn(issn);
         pub.setJournalName(extractJournalName(work));
+        extractTopics(work, pub);
 
         OaStatus oaStatus = extractOaStatus(work);
         pub.setOaStatusOpenalex(oaStatus);
@@ -208,6 +209,29 @@ public class OpenAlexHarvestService {
         JsonNode source = primaryLocation.get("source");
         if (source == null || source.isNull()) return null;
         JsonNode displayName = source.get("display_name");
+        return displayName != null && !displayName.isNull() ? displayName.asText() : null;
+    }
+
+    // primary_topic de OpenAlex: topic → subfield → field (jerarquía).
+    // Solo se pisan valores no nulos: si un re-harvest no trae clasificación,
+    // se conserva la que ya tenía el registro.
+    private void extractTopics(JsonNode work, Publication pub) {
+        JsonNode topic = work.get("primary_topic");
+        if (topic == null || topic.isNull()) return;
+
+        String topicName = displayNameOf(topic);
+        if (topicName != null) pub.setTopic(topicName);
+
+        String subfieldName = displayNameOf(topic.get("subfield"));
+        if (subfieldName != null) pub.setSubfield(subfieldName);
+
+        String fieldName = displayNameOf(topic.get("field"));
+        if (fieldName != null) pub.setField(fieldName);
+    }
+
+    private String displayNameOf(JsonNode node) {
+        if (node == null || node.isNull()) return null;
+        JsonNode displayName = node.get("display_name");
         return displayName != null && !displayName.isNull() ? displayName.asText() : null;
     }
 
